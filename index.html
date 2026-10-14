@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OctoAdvisor AI &bull; GitHub Portfolio &amp; Career Readiness Advisor</title>
+    <meta name="description" content="AI-powered GitHub Portfolio Advisor that analyzes your profile, scores repositories, detects skill gaps, and prepares you for technical hiring." />
+    
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app" class="app-container">
+      <!-- Site Header -->
+      <header class="site-header">
+        <div class="brand-wrapper">
+          <div class="brand-logo-icon">🐙</div>
+          <div>
+            <h1 class="brand-title">OctoAdvisor AI</h1>
+            <p class="brand-subtitle">GitHub Portfolio &bull; Career Readiness Architect</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <div id="rateLimitBadge" class="rate-limit-badge" title="GitHub API Rate Limit Status">
+            <span class="rate-indicator" id="rateIndicator"></span>
+            <span id="rateLimitText">Rate Limit: 60/60</span>
+          </div>
+          <button id="btnOpenTokenModal" class="btn-icon-header" title="Configure GitHub Personal Access Token">
+            🔑 <span>GitHub Token</span>
+          </button>
+          <button id="btnOpenAiModal" class="btn-icon-header" title="AI Model & Key Settings">
+            ⚙️ <span>AI Settings</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Search & Role Control Bar -->
+      <section class="control-bar-card">
+        <form id="searchForm" class="search-form-row">
+          <div class="search-input-group">
+            <span class="search-icon-prefix">🔍</span>
+            <input 
+              type="text" 
+              id="usernameInput" 
+              class="search-input" 
+              placeholder="Enter GitHub username (e.g. alexrivera-dev, gaearon, torvalds)..." 
+              value="alexrivera-dev" 
+              required 
+            />
+          </div>
+
+          <div class="role-select-group">
+            <label for="roleSelect" class="role-label">Target Role:</label>
+            <select id="roleSelect" class="role-select">
+              <option value="fullstack">🌐 Full-Stack Engineer</option>
+              <option value="ai-ml">🤖 AI / Machine Learning Engineer</option>
+              <option value="frontend">🎨 Senior Frontend Engineer</option>
+              <option value="backend">⚙️ Backend &amp; Systems Engineer</option>
+              <option value="devops">☁️ DevOps &amp; Cloud Engineer</option>
+              <option value="mobile">📱 Mobile App Developer</option>
+            </select>
+          </div>
+
+          <button type="submit" id="btnAnalyze" class="btn-primary">
+            <span>Audit Portfolio</span>
+            <span id="analyzeSpinner" style="display: none;">⏳</span>
+          </button>
+        </form>
+
+        <!-- Demo Profiles Quick Switcher -->
+        <div class="demo-chips-row">
+          <span class="demo-label">Instant Demo Profiles:</span>
+          <button type="button" class="demo-chip active" data-username="alexrivera-dev">
+            <span>💻 Alex Rivera (Full-Stack &bull; 78%)</span>
+          </button>
+          <button type="button" class="demo-chip" data-username="priya-ml-ai">
+            <span>🧠 Dr. Priya Sharma (AI/ML &bull; 86%)</span>
+          </button>
+          <button type="button" class="demo-chip" data-username="jordan-codecraft">
+            <span>🌱 Jordan Chen (Junior &bull; 59%)</span>
+          </button>
+          <button type="button" class="demo-chip" data-username="marcus-devops">
+            <span>🛡️ Marcus Vance (DevOps &bull; 91%)</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Candidate Profile Hero Card -->
+      <section id="profileHeroSection" class="profile-hero-card">
+        <div class="profile-avatar-wrapper">
+          <img id="profileAvatar" class="profile-avatar" src="" alt="Profile avatar" />
+        </div>
+
+        <div class="profile-main-meta">
+          <div class="profile-name-row">
+            <h2 id="profileName" class="profile-full-name">Candidate Name</h2>
+            <span id="profileLogin" class="profile-handle-badge">@username</span>
+            <span id="profileHireable" class="profile-badge-hireable">✓ Available for Hire</span>
+          </div>
+
+          <p id="profileBio" class="profile-bio">Developer bio loading...</p>
+
+          <div class="profile-meta-tags">
+            <span id="metaCompany" class="profile-meta-item">🏢 <span>Company</span></span>
+            <span id="metaLocation" class="profile-meta-item">📍 <span>Location</span></span>
+            <a id="metaBlog" class="profile-meta-item" href="#" target="_blank" rel="noopener">🔗 <span>Website</span></a>
+            <a id="metaGithub" class="profile-meta-item" href="#" target="_blank" rel="noopener">🐙 <span>GitHub Profile</span></a>
+          </div>
+        </div>
+
+        <div class="profile-stats-sidebar">
+          <div class="stat-box">
+            <span id="statPublicRepos" class="stat-value">0</span>
+            <span class="stat-label">Repositories</span>
+          </div>
+          <div class="stat-box">
+            <span id="statFollowers" class="stat-value">0</span>
+            <span class="stat-label">Followers</span>
+          </div>
+          <div class="stat-box">
+            <span id="statStars" class="stat-value">0</span>
+            <span class="stat-label">Stars Earned</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scorecard & Competencies Overview -->
+      <section class="scorecard-grid">
+        <!-- Overall Readiness Score Gauge -->
+        <div class="overall-score-card">
+          <div class="score-meter-wrapper">
+            <svg class="score-svg-circle" viewBox="0 0 120 120">
+              <circle class="score-bg-ring" cx="60" cy="60" r="50"></circle>
+              <circle id="scoreProgressRing" class="score-progress-ring" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
+            </svg>
+            <div class="score-center-text">
+              <span id="overallScoreVal" class="score-number">--</span>
+              <span class="score-denom">/ 100</span>
+            </div>
+          </div>
+
+          <span id="gradeBadge" class="score-grade-badge">Grade A</span>
+          <h3 id="tierTitle" class="score-tier-title">Industry Ready</h3>
+          <p id="tierDesc" class="score-tier-desc">Evaluating candidate repositories and strengths...</p>
+        </div>
+
+        <!-- Dimensional Competencies Breakdown -->
+        <div class="dimensions-card">
+          <div>
+            <div class="card-section-title">
+              <span>📊 Dimensional Competency Breakdown</span>
+              <button id="btnAskAiAboutScore" class="btn-sm-action">💬 Ask AI Advice</button>
+            </div>
+
+            <div class="dimension-items-stack">
+              <div class="dim-row">
+                <div class="dim-header">
+                  <span class="dim-name">📖 Documentation &amp; Readability</span>
+                  <span id="dimDocVal" class="dim-score-val">0%</span>
+                </div>
+                <div class="dim-progress-track">
+                  <div id="dimDocBar" class="dim-progress-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <div class="dim-row">
+                <div class="dim-header">
+                  <span class="dim-name">⚡ Code Quality &amp; Architecture</span>
+                  <span id="dimQualityVal" class="dim-score-val">0%</span>
+                </div>
+                <div class="dim-progress-track">
+                  <div id="dimQualityBar" class="dim-progress-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <div class="dim-row">
+                <div class="dim-header">
+                  <span class="dim-name">🌟 Community Proof &amp; Social Impact</span>
+                  <span id="dimImpactVal" class="dim-score-val">0%</span>
+                </div>
+                <div class="dim-progress-track">
+                  <div id="dimImpactBar" class="dim-progress-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <div class="dim-row">
+                <div class="dim-header">
+                  <span class="dim-name">🎯 Target Career Role Alignment</span>
+                  <span id="dimRoleVal" class="dim-score-val">0%</span>
+                </div>
+                <div class="dim-progress-track">
+                  <div id="dimRoleBar" class="dim-progress-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <div class="dim-row">
+                <div class="dim-header">
+                  <span class="dim-name">🧹 Repository Hygiene &amp; Cleanliness</span>
+                  <span id="dimHygieneVal" class="dim-score-val">0%</span>
+                </div>
+                <div class="dim-progress-track">
+                  <div id="dimHygieneBar" class="dim-progress-bar" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- High-Impact Quick Wins -->
+          <div class="quick-wins-section">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: #fff;">⚡ High-Impact Quick Wins (Score Boosters)</h4>
+            <div id="quickWinsContainer" class="quick-wins-grid">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View Navigation Tabs -->
+      <nav class="tabs-navigation">
+        <button type="button" class="tab-btn active" data-tab="repos">
+          <span>📦 Repositories Matrix</span>
+          <span id="tabReposCount" class="tab-badge">0</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="skills">
+          <span>🎯 Skill Gap Analysis</span>
+          <span id="tabSkillsBadge" class="tab-badge">0%</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="recruiter">
+          <span>👁️ Recruiter 6-Sec Scan</span>
+          <span id="tabRecruiterBadge" class="tab-badge">4.2★</span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="sprint">
+          <span>📋 30-Day Sprint Plan</span>
+          <span id="tabSprintBadge" class="tab-badge">0/12</span>
+        </button>
+      </nav>
+
+      <!-- Tab 1: Repositories Matrix -->
+      <section id="tabViewRepos" class="tab-content-panel">
+        <div class="repos-filter-bar">
+          <div class="filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All Repositories</button>
+            <button type="button" class="filter-pill" data-filter="flagship">⭐ Flagship / Pin-Worthy</button>
+            <button type="button" class="filter-pill" data-filter="warnings">⚠️ Needs Attention</button>
+          </div>
+
+          <div class="repos-sort-group">
+            <label for="reposSortSelect">Sort by:</label>
+            <select id="reposSortSelect" class="role-select" style="padding: 6px 12px; font-size: 0.82rem;">
+              <option value="health">Audit Health Score</option>
+              <option value="stars">Most Stars</option>
+              <option value="updated">Recently Updated</option>
+              <option value="name">Alphabetical</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="reposGrid" class="repos-grid">
+          <!-- Rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- Tab 2: Skill Gap Analysis -->
+      <section id="tabViewSkills" class="tab-content-panel" style="display: none;">
+        <div class="skill-gap-layout">
+          <div class="skill-panel-card">
+            <h3 class="card-section-title">
+              <span>✅ Demonstrated Skills in Portfolio</span>
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Technologies, libraries, and frameworks discovered in repositories, topics, and descriptions:
+            </p>
+            <div id="matchedSkillsList" class="skill-tags-cloud"></div>
+          </div>
+
+          <div class="skill-panel-card">
+            <h3 class="card-section-title">
+              <span>⚠️ Critical Industry Skill Gaps</span>
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Essential skills expected by recruiters for this target role that are currently missing:
+            </p>
+            <div id="missingSkillsList" class="skill-tags-cloud"></div>
+          </div>
+
+          <!-- Gap-Bridging Project Blueprint -->
+          <div id="blueprintContainer" class="project-blueprint-card">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 3: Recruiter 6-Second Glance Simulation -->
+      <section id="tabViewRecruiter" class="tab-content-panel" style="display: none;">
+        <div class="recruiter-sim-layout">
+          <div class="recruiter-verdict-card">
+            <div id="recruiterStars" class="recruiter-stars-row">★★★★☆</div>
+            <div id="recruiterScoreText" class="recruiter-rating-text">4.2 / 5.0</div>
+            <div id="recruiterTier" class="recruiter-tier-tag">Mid-Level Candidate</div>
+
+            <div class="salary-index-box">
+              <div class="salary-label">Estimated Market Band</div>
+              <div id="recruiterSalary" class="salary-range">$115k - $145k</div>
+            </div>
+
+            <p id="recruiterVerdict" style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.45;"></p>
+          </div>
+
+          <div class="flags-dual-grid">
+            <div class="flags-card">
+              <h4 style="font-size: 1rem; font-weight: 700; color: #4ade80; display: flex; align-items: center; gap: 8px;">
+                <span>🟢 Recruiter Green Flags</span>
+              </h4>
+              <ul id="greenFlagsList" class="flags-list"></ul>
+            </div>
+
+            <div class="flags-card">
+              <h4 style="font-size: 1rem; font-weight: 700; color: #f87171; display: flex; align-items: center; gap: 8px;">
+                <span>🔴 Recruiter Caution &amp; Red Flags</span>
+              </h4>
+              <ul id="redFlagsList" class="flags-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 4: 30-Day Sprint Action Plan -->
+      <section id="tabViewSprint" class="tab-content-panel" style="display: none;">
+        <div class="sprint-container">
+          <div class="sprint-header-card">
+            <div>
+              <h3 style="font-size: 1.2rem; font-weight: 800; color: #fff;">🚀 30-Day Portfolio Transformation Sprint</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                Follow this curated 4-week roadmap to boost your readiness score by 25+ points and stand out in hiring pipelines.
+              </p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button id="btnExportSprintMd" class="btn-sm-action">📄 Export as Markdown</button>
+              <button id="btnOptimizeBioModal" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">✍️ Bio Generator</button>
+            </div>
+          </div>
+
+          <div id="sprintWeeksContainer" style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Floating / Docked OctoAdvisor AI Chat Widget -->
+      <div class="ai-chat-dock">
+        <button id="btnToggleChat" class="chat-toggle-btn">
+          <span>💬</span>
+          <span>Ask OctoAdvisor AI</span>
+        </button>
+      </div>
+
+      <!-- Chat Drawer Window -->
+      <aside id="chatWindow" class="chat-window hidden" aria-label="OctoAdvisor AI Chat">
+        <div class="chat-header">
+          <div class="chat-header-user">
+            <div class="chat-ai-avatar">🐙</div>
+            <div>
+              <div class="chat-header-title">OctoAdvisor AI</div>
+              <div class="chat-header-status">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #4ade80;"></span>
+                <span>Active &bull; Context Aware</span>
+              </div>
+            </div>
+          </div>
+          <button id="btnCloseChat" class="chat-close-btn" title="Minimize Chat">&times;</button>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="chat-quick-prompts-bar">
+          <button class="prompt-chip" data-prompt="How can I get my portfolio to a 90+ score?">🎯 Get 90+ Score</button>
+          <button class="prompt-chip" data-prompt="Critique my top project and tell me what recruiters think">🔍 Critique Flagship Repo</button>
+          <button class="prompt-chip" data-prompt="What missing skills will hurt me most in interviews?">⚡ Missing Skills</button>
+          <button class="prompt-chip" data-prompt="Write an impactful bio and headline for my GitHub profile">✍️ Bio Options</button>
+          <button class="prompt-chip" data-prompt="Give me 5 technical interview questions based on my code">🎙️ Mock Interview</button>
+        </div>
+
+        <div id="chatMessages" class="chat-messages-container">
+          <!-- Chat messages rendered dynamically -->
+        </div>
+
+        <form id="chatForm" class="chat-input-bar">
+          <input 
+            type="text" 
+            id="chatInput" 
+            class="chat-input" 
+            placeholder="Ask OctoAdvisor anything about your portfolio..." 
+            autocomplete="off" 
+            required 
+          />
+          <button type="submit" class="chat-send-btn">Send</button>
+        </form>
+      </aside>
+
+      <!-- Modal: AI README Generator -->
+      <div id="readmeModal" class="modal-backdrop">
+        <div class="modal-dialog" style="max-width: 780px;">
+          <div class="modal-header">
+            <h3 class="modal-title">✨ AI GitHub README Generator</h3>
+            <button id="btnCloseReadmeModal" class="chat-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div style="margin-bottom: 16px;">
+              <label style="font-weight: 600; font-size: 0.85rem; color: #fff;">Selected Repository:</label>
+              <select id="readmeRepoSelect" class="role-select" style="width: 100%; margin-top: 6px;"></select>
+            </div>
+
+            <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; font-size: 0.82rem; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px;">
+              <label><input type="checkbox" id="chkBadges" checked> Shields.io Badges</label>
+              <label><input type="checkbox" id="chkDemo" checked> Live Demo Link</label>
+              <label><input type="checkbox" id="chkFeatures" checked> Key Features</label>
+              <label><input type="checkbox" id="chkStack" checked> Tech Stack Table</label>
+              <label><input type="checkbox" id="chkInstall" checked> Getting Started</label>
+              <label><input type="checkbox" id="chkTree" checked> Project Directory Tree</label>
+            </div>
+
+            <label style="font-weight: 600; font-size: 0.85rem; color: #fff;">Generated Markdown Preview:</label>
+            <textarea 
+              id="readmePreviewText" 
+              class="search-input" 
+              rows="12" 
+              style="font-family: var(--font-mono); font-size: 0.8rem; margin-top: 6px; height: 260px;"
+            ></textarea>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCopyReadme" class="btn-sm-action">📋 Copy Markdown</button>
+            <button id="btnDownloadReadme" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">💾 Download README.md</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: GitHub Token & Rate Limits -->
+      <div id="tokenModal" class="modal-backdrop">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">🔑 GitHub Personal Access Token (PAT)</h3>
+            <button id="btnCloseTokenModal" class="chat-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin-bottom: 14px; line-height: 1.5;">
+              GitHub imposes a limit of <strong>60 unauthenticated requests/hour</strong> per IP address. Adding a free, read-only token elevates your limit to <strong>5,000 requests/hour</strong>.
+            </p>
+            <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.82rem;">
+              🔒 <strong>Privacy Assurance:</strong> Your token is stored only locally in your browser's <code>localStorage</code> and transmitted directly to <code>api.github.com</code>. No servers store it.
+            </div>
+            <label for="tokenInput" style="font-weight: 600; font-size: 0.85rem; color: #fff;">GitHub Token (Classic or Fine-Grained with public_repo read):</label>
+            <input type="password" id="tokenInput" class="search-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="margin-top: 6px;" />
+          </div>
+          <div class="modal-footer">
+            <button id="btnClearToken" class="btn-sm-action" style="color: #f87171;">Clear Token</button>
+            <button id="btnSaveToken" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">Save Token</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: AI Settings -->
+      <div id="aiModal" class="modal-backdrop">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">⚙️ AI Advisor Configuration</h3>
+            <button id="btnCloseAiModal" class="chat-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin-bottom: 14px; line-height: 1.5;">
+              OctoAdvisor includes a built-in expert reasoning engine with zero setup required. You can also connect your own Google Gemini API Key for direct dynamic LLM generation.
+            </p>
+
+            <div style="margin-bottom: 16px;">
+              <label for="aiProviderSelect" style="font-weight: 600; font-size: 0.85rem; color: #fff;">Advisor Intelligence Engine:</label>
+              <select id="aiProviderSelect" class="role-select" style="width: 100%; margin-top: 6px;">
+                <option value="builtin">⚡ Built-in Expert Engine (Instant, Offline, Free)</option>
+                <option value="gemini">✨ Google Gemini Flash (Generative LLM via Custom Key)</option>
+              </select>
+            </div>
+
+            <div id="geminiKeyGroup" style="display: none; margin-bottom: 16px;">
+              <label for="geminiKeyInput" style="font-weight: 600; font-size: 0.85rem; color: #fff;">Gemini API Key:</label>
+              <input type="password" id="geminiKeyInput" class="search-input" placeholder="AIzaSy..." style="margin-top: 6px;" />
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+              </p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnSaveAiSettings" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">Apply Settings</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Bio Optimizer -->
+      <div id="bioModal" class="modal-backdrop">
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 class="modal-title">✍️ Recruiter-Optimized GitHub Bios</h3>
+            <button id="btnCloseBioModal" class="chat-close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin-bottom: 14px;">
+              Recruiters scan profiles in 6 seconds. Pick one of these battle-tested bios crafted specifically for your current target role:
+            </p>
+            <div id="bioOptionsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCloseBioModalBtn" class="btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Container -->
+      <div id="toastContainer" class="toast-container"></div>
+    </div>
+
+    <!-- Application Script Entry Point -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
