@@ -56,7 +56,7 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/honakul/GitHub-Portfolio-Advisor.git
+git clone https://github.com/hknakul/GitHub-Portfolio-Advisor.git
 cd GitHub-Portfolio-Advisor
 
 # 2. Install dependencies
